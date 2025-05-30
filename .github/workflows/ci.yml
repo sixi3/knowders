@@ -1,0 +1,319 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x]
+        browser: [chrome, firefox]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run unit tests
+      run: npm run test:coverage
+    
+    - name: Run performance tests
+      run: npm run test:performance
+    
+    - name: Run accessibility tests
+      run: npm run test:accessibility
+    
+    - name: Check bundle size
+      run: npm run size
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Run browser tests
+      uses: browser-actions/setup-playwright@v1
+      with:
+        browsers: ${{ matrix.browser }}
+    
+    - name: Run Playwright tests
+      run: npx playwright test
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: |
+          coverage/
+          playwright-report/
+          test-results/
+    
+    - name: Check performance budgets
+      run: |
+        npm run test:performance
+        if [ $? -ne 0 ]; then
+          echo "Performance tests failed"
+          exit 1
+        fi
+    
+    - name: Check accessibility
+      run: |
+        npm run test:accessibility
+        if [ $? -ne 0 ]; then
+          echo "Accessibility tests failed"
+          exit 1
+        fi
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run security audit
+      run: npm audit
+    
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Check bundle size
+      run: npm run size
+    
+    - name: Compare bundle size
+      uses: preactjs/compressed-size-action@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        pattern: 'dist/*.{js,css}'
+
+  quality-checks:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Lint code
+      run: npm run lint
+    
+    - name: Run tests
+      run: npm run test:coverage
+    
+    - name: Build library
+      run: npm run build
+    
+    - name: Check bundle size (CRITICAL)
+      run: npm run size
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  browser-testing:
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build for testing
+      run: npm run build
+    
+    - name: Install Playwright
+      run: npx playwright install
+    
+    - name: Run cross-browser tests
+      run: npm run test:browser
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: browser-test-results
+        path: test-results/
+
+  performance-audit:
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build library
+      run: npm run build
+    
+    - name: Lighthouse CI
+      run: |
+        npm install -g @lhci/cli
+        lhci autorun
+      env:
+        LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  security-audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Security audit
+      run: npm audit --audit-level=moderate
+    
+    - name: Check for known vulnerabilities
+      run: |
+        npx audit-ci --moderate
+
+  bundle-analysis:
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build and analyze
+      run: |
+        npm run build
+        npx bundlesize
+    
+    - name: Bundle analysis report
+      run: |
+        echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+        echo "| File | Size | Gzipped |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|------|---------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Get file sizes
+        UMD_SIZE=$(stat -c%s dist/knowder.umd.js | numfmt --to=iec-i --suffix=B)
+        ESM_SIZE=$(stat -c%s dist/knowder.esm.js | numfmt --to=iec-i --suffix=B)
+        UMD_GZIP=$(gzip -c dist/knowder.umd.js | wc -c | numfmt --to=iec-i --suffix=B)
+        ESM_GZIP=$(gzip -c dist/knowder.esm.js | wc -c | numfmt --to=iec-i --suffix=B)
+        
+        echo "| knowder.umd.js | $UMD_SIZE | $UMD_GZIP |" >> $GITHUB_STEP_SUMMARY
+        echo "| knowder.esm.js | $ESM_SIZE | $ESM_GZIP |" >> $GITHUB_STEP_SUMMARY
+        
+        # Check critical 5KB limit
+        UMD_GZIP_BYTES=$(gzip -c dist/knowder.umd.js | wc -c)
+        if [ $UMD_GZIP_BYTES -gt 5120 ]; then
+          echo "❌ **CRITICAL: Bundle size exceeds 5KB limit!**" >> $GITHUB_STEP_SUMMARY
+          echo "Current size: $UMD_GZIP ($UMD_GZIP_BYTES bytes)" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        else
+          echo "✅ **Bundle size within 5KB limit**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [quality-checks, browser-testing, performance-audit, security-audit, bundle-analysis]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org/'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build production
+      run: npm run build
+    
+    - name: Semantic Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: npx semantic-release 
