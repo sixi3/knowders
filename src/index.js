@@ -8,8 +8,8 @@ import { FactLoader } from './core/factLoader.js';
 // Create singleton instance
 const knowder = new FactLoader();
 
-// Export public API
-export default {
+// Create public API
+const Knowder = {
   /**
    * Initialize Knowder with configuration options
    * @param {Object} options - Configuration options
@@ -57,4 +57,7 @@ export default {
   getCategories() {
     return knowder.getCategories();
   }
-}; 
+};
+
+// Export for both ESM and UMD
+export default Knowder; 

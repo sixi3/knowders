@@ -85,7 +85,23 @@
             font-size: 14px;
             overflow-x: auto;
         }
+
+        .category-selector {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 6px;
+            background: #f5f5f5;
+        }
+
+        .category-selector select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            margin-left: 10px;
+        }
     </style>
+    <script src="../dist/knowder.umd.js"></script>
 </head>
 <body>
     <div class="container">
@@ -107,17 +123,22 @@ Knowder.start('general');
 Knowder.stop();
         </div>
 
+        <div class="category-selector">
+            <label for="category">Select Category:</label>
+            <select id="category" onchange="updateCategory()">
+                <option value="general">General</option>
+                <option value="science">Science</option>
+                <option value="tech">Technology</option>
+            </select>
+        </div>
+
         <button onclick="simulateLoading()">Simulate App Loading</button>
-        <button onclick="showScience()">Show Science Facts</button>
-        <button onclick="showGeneral()">Show General Facts</button>
+        <button onclick="showCurrentCategory()">Show Current Category</button>
         <button onclick="stopFacts()">Stop Facts</button>
 
         <div id="status" class="status" style="display: none;"></div>
     </div>
 
-    <!-- Include Knowder library -->
-    <script src="/dist/knowder.umd.js"></script>
-    
     <script>
         // Initialize Knowder with custom styling
         Knowder.init({
@@ -138,14 +159,29 @@ Knowder.stop();
         link.rel = 'stylesheet';
         document.head.appendChild(link);
 
+        let currentCategory = 'general';
+
+        function updateCategory() {
+            currentCategory = document.getElementById('category').value;
+            updateStatus(`Category changed to: ${currentCategory}`);
+        }
+
         function simulateLoading() {
             const statusEl = document.getElementById('status');
             statusEl.style.display = 'block';
             statusEl.className = 'status loading';
             statusEl.textContent = '🔄 Loading application... (showing facts while you wait)';
             
-            // Start showing facts
-            Knowder.start('general');
+            // Initialize Knowder with the status element as the target
+            Knowder.init({
+                target: statusEl,
+                duration: 3000,
+                backgroundColor: 'rgba(102, 126, 234, 0.95)',
+                textColor: '#ffffff'
+            });
+            
+            // Start showing facts from current category
+            Knowder.start(currentCategory);
             
             // Simulate app loading time
             setTimeout(() => {
@@ -159,14 +195,28 @@ Knowder.stop();
             }, 8000);
         }
 
-        function showScience() {
-            Knowder.start('science');
-            updateStatus('🔬 Showing science facts...');
-        }
-
-        function showGeneral() {
-            Knowder.start('general');
-            updateStatus('🌟 Showing general facts...');
+        function showCurrentCategory() {
+            const statusEl = document.getElementById('status');
+            statusEl.style.display = 'block';
+            statusEl.className = 'status loading';
+            
+            // Initialize Knowder with the status element as the target
+            Knowder.init({
+                target: statusEl,
+                duration: 3000,
+                backgroundColor: 'rgba(102, 126, 234, 0.95)',
+                textColor: '#ffffff',
+                fontSize: '18px',
+                fontFamily: "'Poppins', sans-serif",
+                fontStyle: 'italic',
+                fontWeight: '500',
+                letterSpacing: '0.5px',
+                textTransform: 'none'
+            });
+            
+            // Start showing facts from current category
+            Knowder.start(currentCategory);
+            updateStatus(`Showing ${currentCategory} facts...`);
         }
 
         function stopFacts() {

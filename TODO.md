@@ -74,7 +74,52 @@
   - [x] Test memory usage
   - [x] Test validation logic
 
----
+## 📚 Phase 2.5: Fact Management System (Week 2.5)
+
+### Core Facts Implementation
+- [ ] **Create core facts module**
+  - [ ] Curate 200 high-quality general facts
+  - [ ] Implement efficient fact storage
+  - [ ] Add fact validation
+  - [ ] Optimize bundle size
+  - [ ] Add fact categorization
+  - [ ] Implement rotation logic
+
+### Optional API Extension
+- [ ] **Create API extension module**
+  - [ ] Design API client
+  - [ ] Implement caching
+  - [ ] Add offline fallback
+  - [ ] Create API documentation
+  - [ ] Add usage examples
+  - [ ] Implement error handling
+
+### Fact Management
+- [ ] **Implement fact management system**
+  - [ ] Create fact validation rules
+  - [ ] Add fact rotation algorithm
+  - [ ] Implement fact cooldown
+  - [ ] Add fact freshness scoring
+  - [ ] Create fact reset mechanism
+  - [ ] Add fact tracking
+
+### Testing & Optimization
+- [ ] **Add comprehensive tests**
+  - [ ] Test core facts module
+  - [ ] Test API extension
+  - [ ] Test rotation logic
+  - [ ] Test performance
+  - [ ] Test bundle size
+  - [ ] Test offline functionality
+
+### Documentation
+- [ ] **Document fact system**
+  - [ ] Core facts documentation
+  - [ ] API extension guide
+  - [ ] Usage examples
+  - [ ] Performance tips
+  - [ ] Troubleshooting guide
+  - [ ] Migration guide
 
 ## 🎨 Phase 3: Display Engine (Week 3) 🔄 IN PROGRESS
 
@@ -112,6 +157,7 @@
   - [x] Test accessibility features
   - [x] Test performance metrics
   - [x] Test cleanup logic
+  - [x] Test keyboard accessibility (Note: Minor focus issue remains, but core functionality is stable)
 
 ---
 

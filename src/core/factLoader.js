@@ -35,9 +35,8 @@ export class FactLoader {
    * @returns {FactLoader} Instance for chaining
    */
   start(category = 'general') {
-    if (this._interval) {
-      this.stop();
-    }
+    // Always stop current display before starting new one
+    this.stop();
 
     this._currentCategory = category;
     

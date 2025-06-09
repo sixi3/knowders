@@ -1,92 +1,120 @@
 /**
  * FactStorage - Manages fact storage and retrieval
- * Optimized for memory usage and performance
+ * Optimized for minimal memory usage and efficient access
  */
 
-import { DEFAULT_FACTS } from '../data/defaultFacts.js';
+import coreFacts from '../data/coreFacts';
 
 export class FactStorage {
   constructor() {
-    this.f = new Map(); // facts
-    this.u = new Map(); // used facts
-    this._init();
+    this.customFacts = new Map();
+    this.initialized = false;
   }
 
   /**
-   * Initialize facts from default database
-   * @private
+   * Initialize the fact storage
+   * @returns {void}
    */
-  _init() {
-    for (const [k, v] of Object.entries(DEFAULT_FACTS)) {
-      this.f.set(k, [...v]);
-      this.u.set(k, new Set());
+  init() {
+    if (this.initialized) return;
+    
+    // Initialize custom facts map
+    this.customFacts = new Map();
+    this.initialized = true;
+  }
+
+  /**
+   * Get a random fact from a specific category
+   * @param {string} category - The fact category
+   * @returns {string} A random fact
+   */
+  getRandomFact(category = 'general') {
+    if (!this.initialized) this.init();
+
+    try {
+      // Check if we have custom facts for this category
+      const customFacts = this.customFacts.get(category);
+      if (customFacts && customFacts.length > 0) {
+        return customFacts[Math.floor(Math.random() * customFacts.length)];
+      }
+
+      // Fall back to core facts
+      const fact = coreFacts.getRandomFact(category);
+      if (!fact) {
+        console.warn(`No facts available for category: ${category}`);
+        return 'Loading...';
+      }
+      return fact;
+    } catch (error) {
+      console.warn('Error getting random fact:', error);
+      return 'Loading...';
     }
   }
 
   /**
-   * Add new facts to a category
-   * @param {string} k - Category name
-   * @param {string[]} v - Array of facts
+   * Add custom facts to a category
+   * @param {string} category - The fact category
+   * @param {string[]} facts - Array of facts to add
+   * @returns {void}
    */
-  addFacts(k, v) {
-    if (!Array.isArray(v)) return;
+  addFacts(category, facts) {
+    if (!this.initialized) this.init();
     
-    if (!this.f.has(k)) {
-      this.f.set(k, []);
-      this.u.set(k, new Set());
+    if (!Array.isArray(facts)) {
+      throw new Error('Facts must be an array');
     }
-    
-    this.f.get(k).push(...v);
+
+    // Validate facts
+    facts.forEach(fact => {
+      if (typeof fact !== 'string' || fact.length === 0) {
+        throw new Error('Each fact must be a non-empty string');
+      }
+    });
+
+    // Add facts to custom facts map
+    const existingFacts = this.customFacts.get(category) || [];
+    this.customFacts.set(category, [...existingFacts, ...facts]);
   }
 
   /**
-   * Get a random fact from a category
-   * @param {string} k - Category name
-   * @returns {string|null} Random fact or null if none available
-   */
-  getRandomFact(k) {
-    const f = this.f.get(k);
-    const u = this.u.get(k);
-    
-    if (!f || !f.length) return null;
-    
-    // If all facts have been used, reset used facts
-    if (u.size >= f.length) {
-      u.clear();
-    }
-    
-    // Get random unused fact
-    let x;
-    do {
-      x = f[Math.floor(Math.random() * f.length)];
-    } while (u.has(x));
-    
-    u.add(x);
-    return x;
-  }
-
-  /**
-   * Get available categories
+   * Get all available categories
    * @returns {string[]} Array of category names
    */
   getCategories() {
-    return Array.from(this.f.keys());
+    if (!this.initialized) this.init();
+    
+    // Combine core and custom categories
+    const categories = new Set([
+      ...coreFacts.getCategories(),
+      ...this.customFacts.keys()
+    ]);
+    
+    return Array.from(categories);
   }
 
   /**
-   * Get fact count for a category
-   * @param {string} k - Category name
-   * @returns {number} Number of facts
+   * Get all facts for a specific category
+   * @param {string} category - The fact category
+   * @returns {string[]} Array of facts
    */
-  getFactCount(k) {
-    return this.f.get(k)?.length || 0;
+  getFacts(category = 'general') {
+    if (!this.initialized) this.init();
+    
+    // Combine core and custom facts
+    const coreFactsList = coreFacts.getFacts(category);
+    const customFactsList = this.customFacts.get(category) || [];
+    
+    return [...coreFactsList, ...customFactsList];
   }
 
   /**
-   * Clear used facts for a category
-   * @param {string} k - Category name
+   * Reset fact rotation for a specific category
+   * @param {string} category - The fact category
+   * @returns {void}
    */
-  clearUsedFacts(k) {
-    this.u.get(k)?.clear();
+  resetRotation(category = 'general') {
+    if (!this.initialized) this.init();
+    
+    coreFacts.resetRotation(category);
   }
 } 

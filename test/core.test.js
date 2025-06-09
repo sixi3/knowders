@@ -91,17 +91,16 @@ describe('Core Functionality Tests', () => {
 
   describe('Main API', () => {
     test('should initialize with default config', () => {
-      Knowder.init();
-      expect(window.knowder).toBeDefined();
+      const instance = Knowder.init();
+      expect(instance).toBeDefined();
     });
 
-    test('should start and stop fact display', () => {
+    test('should start and stop fact display', async () => {
       Knowder.init();
       Knowder.start();
-      
       expect(document.querySelector('.fact-text')).toBeTruthy();
-      
       Knowder.stop();
+      await new Promise(r => setTimeout(r, 350));
       expect(document.querySelector('.fact-text')).toBeFalsy();
     });
 
@@ -110,18 +109,13 @@ describe('Core Functionality Tests', () => {
         duration: 'invalid',
         fontSize: 123
       };
-      
-      Knowder.init(invalidConfig);
-      expect(window.knowder).toBeDefined();
+      const instance = Knowder.init(invalidConfig);
+      expect(instance).toBeDefined();
     });
 
     test('should maintain singleton instance', () => {
-      Knowder.init();
-      const instance1 = window.knowder;
-      
-      Knowder.init({ fontSize: '20px' });
-      const instance2 = window.knowder;
-      
+      const instance1 = Knowder.init();
+      const instance2 = Knowder.init({ fontSize: '20px' });
       expect(instance1).toBe(instance2);
     });
   });

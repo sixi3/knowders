@@ -6,7 +6,19 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Basic Functionality', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('http://localhost:3001/docs/example.html');
+    // Wait for the library to be loaded
+    await page.waitForFunction(() => window.Knowder !== undefined);
+    // Ensure <body> exists and is properly set up
+    await page.evaluate(() => {
+      if (!document.body) {
+        document.documentElement.appendChild(document.createElement('body'));
+      }
+      // Set a default target for Knowder
+      window.Knowder.init({
+        target: document.body
+      });
+    });
   });
 
   test('should initialize and display facts', async ({ page }) => {
@@ -50,14 +62,14 @@ test.describe('Basic Functionality', () => {
   });
 
   test('should respect reduced motion preference', async ({ page }) => {
-    // Mock reduced motion preference
+    // Mock reduced motion preference (no jest.fn)
     await page.evaluate(() => {
       window.matchMedia = query => ({
         matches: query === '(prefers-reduced-motion: reduce)',
         media: query,
         onchange: null,
-        addListener: jest.fn(),
-        removeListener: jest.fn(),
+        addListener: function() {},
+        removeListener: function() {},
       });
     });
 

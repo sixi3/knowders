@@ -31,8 +31,11 @@ export class DisplayEngine {
    */
   _createContainer() {
     const c = document.createElement('div');
+    c.className = 'fact-container';
     c.setAttribute('role', 'status');
     c.setAttribute('aria-live', 'polite');
+    c.setAttribute('aria-label', 'Loading fact');
+    c.setAttribute('tabindex', '0');
     
     const l = document.createElement('div');
     l.className = 'loader';
@@ -42,6 +45,9 @@ export class DisplayEngine {
     
     c.appendChild(l);
     c.appendChild(t);
+    
+    // Reduced motion support
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     
     Object.assign(c.style, {
       position: 'fixed',
@@ -65,7 +71,7 @@ export class DisplayEngine {
       textAlign: 'center',
       boxShadow: '0 4px 6px rgba(0,0,0,.1)',
       opacity: '0',
-      transition: 'opacity .3s ease-in-out',
+      transition: prefersReducedMotion ? 'none' : 'opacity .3s ease-in-out',
       willChange: 'opacity',
       backfaceVisibility: 'hidden'
     });
@@ -95,13 +101,19 @@ export class DisplayEngine {
       this.o.target.appendChild(this.c);
     }
 
+    // Force reflow for smooth animation
+    this.c.offsetHeight;
+
     this.c.style.opacity = '1';
     this.v = true;
 
     const t = this.c.querySelector('.fact-text');
+    if (!t) return;
+
     t.textContent = f;
     this.f = f;
 
+    // Force reflow for smooth animation
     t.offsetHeight;
     t.classList.add('visible');
   }
@@ -128,19 +140,30 @@ export class DisplayEngine {
    * @param {string} f - New fact to display
    */
   updateFact(f) {
-    if (!this.c || !this.v) {
+    if (!this.c) {
+      this.show(f);
+      return;
+    }
+
+    if (!this.v) {
       this.show(f);
       return;
     }
 
     const t = this.c.querySelector('.fact-text');
-    t.classList.remove('visible');
+    if (!t) {
+      this.show(f);
+      return;
+    }
 
-    setTimeout(() => {
-      t.textContent = f;
-      this.f = f;
-      t.classList.add('visible');
-    }, 150);
+    t.classList.remove('visible');
+    this.f = f;
+
+    // Force reflow for smooth animation
+    t.offsetHeight;
+
+    t.textContent = f;
+    t.classList.add('visible');
   }
 
   /**
